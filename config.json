@@ -1,0 +1,57 @@
+{
+  "repositories": [
+    "alexeagle/awk.bzl",
+    "bazel-contrib/bazel-lib",
+    "bazel-contrib/bazelrc-preset.bzl",
+    "bazel-contrib/jq.bzl",
+    "bazel-contrib/rules_distroless",
+    "bazel-contrib/rules_nodejs",
+    "bazel-contrib/rules_oci",
+    "bazel-contrib/tar.bzl",
+    "bazel-contrib/yq.bzl",
+    "aspect-build/rules_aws",
+    "aspect-build/rules_buildx",
+    "aspect-build/rules_py",
+    "aspect-build/rules_swc",
+    "aspect-build/rules_js",
+    "aspect-build/rules_ts",
+    "aspect-build/rules_lint",
+    "aspect-build/rules_oci",
+    "aspect-build/rules_terser",
+    "aspect-build/toolchains_protoc",
+    "chainguard-dev/rules_apko"
+  ],
+  "checks": [
+    {
+      "name": "config-ci",
+      "file": ".aspect/workflows/config.yaml",
+      "pattern": "config=ci",
+      "description": "Has ci config for AW"
+    },
+    {
+      "name": "release-prep-docs-check",
+      "file": ".github/workflows/release_prep.sh",
+      "pattern": "docs\\.tar\\.gz",
+      "description": "Check if release_prep.sh includes docs.tar.gz",
+      "enabled": false
+    },
+    {
+        "name": "has-tagger",
+        "file": ".github/workflows/tag.yaml",
+        "pattern": "schedule",
+        "description": "Has auto-tagging"
+      },
+      {
+        "name": "dont-use-version-0",
+        "file": "MODULE.bazel",
+        "pattern": "!0.0.0",
+        "description": "Using version 0.0.0 messes with tooling"
+      },
+      {
+        "name": "uses-bazelrc-preset",
+        "file": ".bazelrc",
+        "pattern": "preset.bazelrc",
+        "description": "Uses bazelrc-preset"
+      }
+  ]
+}

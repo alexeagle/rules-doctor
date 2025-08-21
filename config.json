@@ -23,6 +23,18 @@
   ],
   "checks": [
     {
+      "name": "config-ruleset",
+      "file": ".bazelrc",
+      "pattern": "config=ruleset",
+      "description": "Has ruleset config"
+    },
+    {
+      "name": "semantic-pull-request",
+      "file": ".github/workflows/conventional-commits.yaml",
+      "pattern": "semantic-pull-request",
+      "description": "Has semantic pull request check"
+    },
+    {
       "name": "config-ci",
       "file": ".aspect/workflows/config.yaml",
       "pattern": "config=ci",

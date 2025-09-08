@@ -11,6 +11,21 @@ async function loadConfig(configPath: string): Promise<Config> {
   }
 }
 
+async function getRepositories(config: Config, checker: RepositoryChecker): Promise<string[]> {
+  // If dynamic repositories are enabled, fetch them from GitHub
+  if (config.dynamicRepositories?.enabled) {
+    console.log(`Fetching repositories from ${config.dynamicRepositories.source} for org: ${config.dynamicRepositories.organization} with topic: ${config.dynamicRepositories.topic}`);
+    return await checker.fetchBazelContribRepositories();
+  }
+  
+  // Fall back to static repositories if provided
+  if (config.repositories) {
+    return config.repositories;
+  }
+  
+  throw new Error('No repositories configured. Either provide static repositories or enable dynamic repository fetching.');
+}
+
 function reportResults(results: CheckResult[]): void {
   const failedResults = results.filter(result => !result.passed);
   
@@ -78,6 +93,9 @@ async function main(): Promise<void> {
     console.log(`Loading configuration from: ${configPath}`);
     const config = await loadConfig(configPath);
     
+    const checker = new RepositoryChecker();
+    const repositories = await getRepositories(config, checker);
+    
     // Filter checks if a specific check name is provided
     let checks = config.checks;
     if (checkName) {
@@ -88,11 +106,10 @@ async function main(): Promise<void> {
       }
       console.log(`Running only check: ${checkName}\n`);
     } else {
-      console.log(`Found ${config.repositories.length} repositories and ${config.checks.length} checks\n`);
+      console.log(`Found ${repositories.length} repositories and ${config.checks.length} checks\n`);
     }
     
-    const checker = new RepositoryChecker();
-    const results = await checker.checkAllRepositories(config.repositories, checks);
+    const results = await checker.checkAllRepositories(repositories, checks);
     
     console.log('\n--- Results ---');
     reportResults(results);

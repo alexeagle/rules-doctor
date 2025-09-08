@@ -7,7 +7,13 @@ export interface FileCheck {
 }
 
 export interface Config {
-  repositories: string[];
+  repositories?: string[];
+  dynamicRepositories?: {
+    enabled: boolean;
+    source: 'github';
+    organization: string;
+    topic: string;
+  };
   checks: FileCheck[];
 }
 

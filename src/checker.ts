@@ -1,7 +1,41 @@
 import fetch from 'node-fetch';
 import { FileCheck, CheckResult } from './types.js';
 
+interface GitHubRepository {
+  full_name: string;
+  topics: string[];
+}
+
+interface GitHubSearchResponse {
+  items: GitHubRepository[];
+  total_count: number;
+}
+
 export class RepositoryChecker {
+  async fetchBazelContribRepositories(): Promise<string[]> {
+    try {
+      // Search for repositories in bazel-contrib org with aspect-build topic
+      const query = 'org:bazel-contrib topic:aspect-build';
+      const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&per_page=100`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`GitHub API request failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json() as GitHubSearchResponse;
+      
+      // Extract repository names in "owner/repo" format
+      const repositories = data.items.map(repo => repo.full_name);
+      
+      console.log(`Found ${repositories.length} bazel-contrib repositories with aspect-build topic`);
+      return repositories;
+    } catch (error) {
+      console.error('Failed to fetch repositories from GitHub API:', error);
+      throw new Error(`Failed to fetch repositories: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   private async fetchFileContent(repoPath: string, filePath: string): Promise<string> {
     // repoPath is in format "owner/repo"
     const [owner, repoName] = repoPath.split('/');

@@ -1,14 +1,12 @@
 {
+  "dynamicRepositories": {
+    "enabled": true,
+    "source": "github",
+    "organization": "bazel-contrib",
+    "topic": "aspect-build"
+  },
   "repositories": [
     "alexeagle/awk.bzl",
-    "bazel-contrib/bazel-lib",
-    "bazel-contrib/bazelrc-preset.bzl",
-    "bazel-contrib/jq.bzl",
-    "bazel-contrib/rules_distroless",
-    "bazel-contrib/rules_nodejs",
-    "bazel-contrib/rules_oci",
-    "bazel-contrib/tar.bzl",
-    "bazel-contrib/yq.bzl",
     "aspect-build/rules_aws",
     "aspect-build/rules_buildx",
     "aspect-build/rules_cypress",
@@ -52,6 +50,12 @@
       "pattern": "docs\\.tar\\.gz",
       "description": "Check if release_prep.sh includes docs.tar.gz",
       "enabled": false
+    },
+    {
+      "name": "tag-propagate-workflow",
+      "file": ".github/workflows/release.yml",
+      "pattern": "inputs.tag_name || github.ref_name",
+      "description": "Doesn't have the dumb bug"
     },
     {
         "name": "has-tagger",

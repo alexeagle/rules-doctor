@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { FileCheck, CheckResult } from './types.js';
 
 interface GitHubRepository {
@@ -17,17 +16,17 @@ export class RepositoryChecker {
       // Search for repositories in bazel-contrib org with aspect-build topic
       const query = 'org:bazel-contrib topic:aspect-build';
       const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&per_page=100`;
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`GitHub API request failed: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json() as GitHubSearchResponse;
-      
+
       // Extract repository names in "owner/repo" format
       const repositories = data.items.map(repo => repo.full_name);
-      
+
       console.log(`Found ${repositories.length} bazel-contrib repositories with aspect-build topic`);
       return repositories;
     } catch (error) {
@@ -42,10 +41,10 @@ export class RepositoryChecker {
     if (!owner || !repoName) {
       throw new Error(`Invalid repository format: ${repoPath}. Expected "owner/repo"`);
     }
-    
+
     // Use GitHub's raw content API
     const url = `https://raw.githubusercontent.com/${owner}/${repoName}/main/${filePath}`;
-    
+
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -73,12 +72,12 @@ export class RepositoryChecker {
 
   async checkRepository(repoPath: string, checks: FileCheck[]): Promise<CheckResult[]> {
     const results: CheckResult[] = [];
-    
+
     for (const check of checks) {
       try {
         const content = await this.fetchFileContent(repoPath, check.file);
         const passed = this.runCheck(content, check);
-        
+
         results.push({
           repository: repoPath,
           check: check.name,
@@ -95,22 +94,22 @@ export class RepositoryChecker {
         });
       }
     }
-    
+
     return results;
   }
 
   async checkAllRepositories(repositories: string[], checks: FileCheck[]): Promise<CheckResult[]> {
     const allResults: CheckResult[] = [];
     const enabledChecks = checks.filter(check => check.enabled !== false);
-    
+
     console.log(`\n🔍 Running ${enabledChecks.length} checks across ${repositories.length} repositories\n`);
-    
+
     for (const repo of repositories) {
       console.log(`📦 Repository: ${repo}`);
       const results = await this.checkRepository(repo, checks);
       allResults.push(...results);
     }
-    
+
     return allResults;
   }
 }

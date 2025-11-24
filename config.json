@@ -1,79 +1,85 @@
 {
-  "dynamicRepositories": {
-    "enabled": true,
-    "source": "github",
-    "organization": "bazel-contrib",
-    "topic": "aspect-build"
-  },
-  "repositories": [
-    "alexeagle/awk.bzl",
-    "aspect-build/rules_aws",
-    "aspect-build/rules_buildx",
-    "aspect-build/rules_cypress",
-    "aspect-build/rules_esbuild",
-    "aspect-build/rules_lint",
-    "aspect-build/rules_jasmine",
-    "aspect-build/rules_jest",
-    "aspect-build/rules_js",
-    "aspect-build/rules_py",
-    "aspect-build/rules_rollup",
-    "aspect-build/rules_sol",
-    "aspect-build/rules_swc",
-    "aspect-build/rules_terser",
-    "aspect-build/rules_ts",
-    "aspect-build/rules_webpack",
-    "aspect-build/toolchains_protoc",
-    "chainguard-dev/rules_apko"
-  ],
-  "checks": [
-    {
-      "name": "config-ruleset",
-      "file": ".bazelrc",
-      "pattern": "config=ruleset",
-      "description": "Has ruleset config"
+    "dynamicRepositories": {
+        "enabled": true,
+        "source": "github",
+        "organization": "bazel-contrib",
+        "topic": "aspect-build"
     },
-    {
-      "name": "semantic-pull-request",
-      "file": ".github/workflows/conventional-commits.yaml",
-      "pattern": "semantic-pull-request",
-      "description": "Has semantic pull request check"
-    },
-    {
-      "name": "config-ci",
-      "file": ".aspect/workflows/config.yaml",
-      "pattern": "config=ci",
-      "description": "Has ci config for AW"
-    },
-    {
-      "name": "release-prep-docs-check",
-      "file": ".github/workflows/release_prep.sh",
-      "pattern": "docs\\.tar\\.gz",
-      "description": "Check if release_prep.sh includes docs.tar.gz",
-      "enabled": false
-    },
-    {
-      "name": "tag-propagate-workflow",
-      "file": ".github/workflows/release.yml",
-      "pattern": "inputs.tag_name || github.ref_name",
-      "description": "Doesn't have the dumb bug"
-    },
-    {
-        "name": "has-tagger",
-        "file": ".github/workflows/tag.yaml",
-        "pattern": "schedule",
-        "description": "Has auto-tagging"
-      },
-      {
-        "name": "dont-use-version-0",
-        "file": "MODULE.bazel",
-        "pattern": "!0.0.0",
-        "description": "Using version 0.0.0 messes with tooling"
-      },
-      {
-        "name": "uses-bazelrc-preset",
-        "file": ".bazelrc",
-        "pattern": "preset.bazelrc",
-        "description": "Uses bazelrc-preset"
-      }
-  ]
+    "repositories": [
+        "alexeagle/awk.bzl",
+        "aspect-build/rules_aws",
+        "aspect-build/rules_buildx",
+        "aspect-build/rules_cypress",
+        "aspect-build/rules_esbuild",
+        "aspect-build/rules_lint",
+        "aspect-build/rules_jasmine",
+        "aspect-build/rules_jest",
+        "aspect-build/rules_js",
+        "aspect-build/rules_py",
+        "aspect-build/rules_rollup",
+        "aspect-build/rules_sol",
+        "aspect-build/rules_swc",
+        "aspect-build/rules_terser",
+        "aspect-build/rules_ts",
+        "aspect-build/rules_webpack",
+        "aspect-build/toolchains_protoc",
+        "chainguard-dev/rules_apko"
+    ],
+    "checks": [
+        {
+            "name": "config-ruleset",
+            "file": ".bazelrc",
+            "pattern": "config=ruleset",
+            "description": "Has ruleset config"
+        },
+        {
+            "name": "semantic-pull-request",
+            "file": ".github/workflows/conventional-commits.yaml",
+            "pattern": "semantic-pull-request",
+            "description": "Has semantic pull request check"
+        },
+        {
+            "name": "config-ci",
+            "file": ".aspect/workflows/config.yaml",
+            "pattern": "config=ci",
+            "description": "Has ci config for AW"
+        },
+        {
+            "name": "release-prep-docs-check",
+            "file": ".github/workflows/release_prep.sh",
+            "pattern": "docs\\.tar\\.gz",
+            "description": "Check if release_prep.sh includes docs.tar.gz",
+            "enabled": false
+        },
+        {
+            "name": "tag-propagate-workflow",
+            "file": ".github/workflows/release.yml",
+            "pattern": "inputs.tag_name || github.ref_name",
+            "description": "Doesn't have the dumb bug"
+        },
+        {
+            "name": "has-tagger",
+            "file": ".github/workflows/tag.yaml",
+            "pattern": "schedule",
+            "description": "Has auto-tagging"
+        },
+        {
+            "name": "dont-use-version-0",
+            "file": "MODULE.bazel",
+            "pattern": "!0.0.0",
+            "description": "Using version 0.0.0 messes with tooling"
+        },
+        {
+            "name": "uses-bazelrc-preset",
+            "file": ".bazelrc",
+            "pattern": "preset.bazelrc",
+            "description": "Uses bazelrc-preset"
+        },
+        {
+            "name": "dont-use-eol-in-bcr-presubmit",
+            "file": ".bcr/presubmit.yml",
+            "pattern": "!ubuntu2004",
+            "description": "Don't use EOL OSes in bcr presubmit"
+        }
+    ]
 }

@@ -61,7 +61,13 @@
             "name": "has-tagger",
             "file": ".github/workflows/tag.yaml",
             "pattern": "schedule",
-            "description": "Has auto-tagging"
+            "description": "Has auto-tagging",
+            "exclude": [
+                {
+                    "repository": "bazel-contrib/publish-to-bcr",
+                    "reason": "Won't be released to BCR"
+                }
+            ]
         },
         {
             "name": "dont-use-version-0",

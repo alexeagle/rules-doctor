@@ -74,6 +74,11 @@ export class RepositoryChecker {
     const results: CheckResult[] = [];
 
     for (const check of checks) {
+      // Skip check if repository is in exclude list
+      if (check.exclude && check.exclude.some(exclude => exclude.repository === repoPath)) {
+        continue;
+      }
+
       try {
         const content = await this.fetchFileContent(repoPath, check.file);
         const passed = this.runCheck(content, check);

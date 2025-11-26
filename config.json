@@ -84,7 +84,7 @@
         {
             "name": "dont-use-eol-in-bcr-presubmit",
             "file": ".bcr/presubmit.yml",
-            "pattern": "!ubuntu2004",
+            "pattern": "!(ubuntu2004|debian10)",
             "description": "Don't use EOL OSes in bcr presubmit"
         }
     ]

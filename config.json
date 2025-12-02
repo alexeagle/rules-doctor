@@ -49,13 +49,25 @@
             "file": ".github/workflows/release_prep.sh",
             "pattern": "docs\\.tar\\.gz",
             "description": "Check if release_prep.sh includes docs.tar.gz",
-            "enabled": false
+            "enabled": false,
+            "exclude": [
+                {
+                    "repository": "bazel-contrib/publish-to-bcr",
+                    "reason": "Won't be released to BCR"
+                }
+            ]
         },
         {
             "name": "tag-propagate-workflow",
             "file": ".github/workflows/release.yml",
             "pattern": "inputs.tag_name || github.ref_name",
-            "description": "Doesn't have the dumb bug"
+            "description": "Doesn't have the dumb bug",
+            "exclude": [
+                {
+                    "repository": "bazel-contrib/publish-to-bcr",
+                    "reason": "Won't be released to BCR"
+                }
+            ]
         },
         {
             "name": "has-tagger",
@@ -85,7 +97,13 @@
             "name": "dont-use-eol-in-bcr-presubmit",
             "file": ".bcr/presubmit.yml",
             "pattern": "!(ubuntu2004|debian10)",
-            "description": "Don't use EOL OSes in bcr presubmit"
+            "description": "Don't use EOL OSes in bcr presubmit",
+            "exclude": [
+                {
+                    "repository": "bazel-contrib/publish-to-bcr",
+                    "reason": "Won't be released to BCR"
+                }
+            ]
         }
     ]
 }

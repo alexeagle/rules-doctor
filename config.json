@@ -31,7 +31,13 @@
             "name": "config-ruleset",
             "file": ".bazelrc",
             "pattern": "config=ruleset",
-            "description": "Has ruleset config"
+            "description": "Has ruleset config",
+            "exclude": [
+                {
+                    "repository": "bazel-contrib/publish-to-bcr",
+                    "reason": "Is not a ruleset"
+                }
+            ]
         },
         {
             "name": "semantic-pull-request",

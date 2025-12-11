@@ -28,6 +28,21 @@ async function getRepositories(config: Config, checker: RepositoryChecker): Prom
     throw new Error('No repositories configured. Either provide static repositories or enable dynamic repository fetching.');
 }
 
+// Helper to check if a required check failed for a specific repository
+function getFailedRequires(failure: CheckResult, allResults: CheckResult[]): { check: string; reason?: string }[] {
+    if (!failure.requires || failure.requires.length === 0) {
+        return [];
+    }
+
+    return failure.requires.filter(req => {
+        // Check if the required check also failed for this repository
+        const requiredCheckResult = allResults.find(
+            r => r.check === req.check && r.repository === failure.repository
+        );
+        return requiredCheckResult && !requiredCheckResult.passed;
+    });
+}
+
 function generateMarkdownReport(results: CheckResult[]): string {
     const lines: string[] = [];
     const failedResults = results.filter(result => !result.passed);
@@ -68,18 +83,6 @@ function generateMarkdownReport(results: CheckResult[]): string {
         lines.push(`### 🔍 ${checkName}`);
         lines.push('');
 
-        // Show requires info if present (take from first failure since it's the same for all)
-        const requires = failures[0]?.requires;
-        if (requires && requires.length > 0) {
-            lines.push('> **⚠️ Fix these checks first:**');
-            for (const req of requires) {
-                const reason = req.reason ? ` - ${req.reason}` : '';
-                const anchor = `-${req.check}`;
-                lines.push(`> - [\`${req.check}\`](#${anchor})${reason}`);
-            }
-            lines.push('');
-        }
-
         // Group by repository for this check
         const byRepo = failures.reduce((acc, result) => {
             if (!acc[result.repository]) {
@@ -111,6 +114,16 @@ function generateMarkdownReport(results: CheckResult[]): string {
                     }
                 } else {
                     status = '🔍 Pattern not found';
+                }
+
+                // Check if required checks failed for this repo
+                const failedRequires = getFailedRequires(failure, results);
+                if (failedRequires.length > 0) {
+                    const reqLinks = failedRequires.map(req => {
+                        const anchor = `-${req.check}`;
+                        return `[\`${req.check}\`](#${anchor})`;
+                    }).join(', ');
+                    status += ` ⚠️ Fix first: ${reqLinks}`;
                 }
 
                 lines.push(`| ${repoLink} | ${fileLink} | ${status} |`);
@@ -148,16 +161,6 @@ function reportResults(results: CheckResult[]): void {
         const failures = groupedByCheck[checkName];
         console.log(`🔍 Check: ${checkName}`);
 
-        // Show requires info if present (take from first failure since it's the same for all)
-        const requires = failures[0]?.requires;
-        if (requires && requires.length > 0) {
-            console.log('   ⚠️  Fix these checks first:');
-            for (const req of requires) {
-                const reason = req.reason ? ` - ${req.reason}` : '';
-                console.log(`      → ${req.check}${reason}`);
-            }
-        }
-
         // Group by repository for this check
         const byRepo = failures.reduce((acc, result) => {
             if (!acc[result.repository]) {
@@ -185,6 +188,15 @@ function reportResults(results: CheckResult[]): void {
                     console.log(`     🔍 ${failure.filePath} - Pattern not found`);
                 }
                 console.log(`        View: https://github.com/${repo}/blob/main/${failure.filePath}`);
+
+                // Check if required checks failed for this repo
+                const failedRequires = getFailedRequires(failure, results);
+                if (failedRequires.length > 0) {
+                    for (const req of failedRequires) {
+                        const reason = req.reason ? ` (${req.reason})` : '';
+                        console.log(`        ⚠️  Fix first: ${req.check}${reason}`);
+                    }
+                }
             }
         }
         console.log();

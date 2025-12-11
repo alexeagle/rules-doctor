@@ -1,8 +1,12 @@
 import { readFile, writeFile } from 'fs/promises';
 import { RepositoryChecker } from './checker.js';
-import { Config, CheckResult } from './types.js';
+import { Config, CheckResult, RequiresEntry } from './types.js';
 
 const REPORT_FILE = 'report.md';
+
+// ============================================================================
+// Config & Repository Loading
+// ============================================================================
 
 async function loadConfig(configPath: string): Promise<Config> {
     try {
@@ -14,13 +18,11 @@ async function loadConfig(configPath: string): Promise<Config> {
 }
 
 async function getRepositories(config: Config, checker: RepositoryChecker): Promise<string[]> {
-    // If dynamic repositories are enabled, fetch them from GitHub
     if (config.dynamicRepositories?.enabled) {
         console.log(`Fetching repositories from ${config.dynamicRepositories.source} for org: ${config.dynamicRepositories.organization} with topic: ${config.dynamicRepositories.topic}`);
         return await checker.fetchBazelContribRepositories();
     }
 
-    // Fall back to static repositories if provided
     if (config.repositories) {
         return config.repositories;
     }
@@ -28,14 +30,39 @@ async function getRepositories(config: Config, checker: RepositoryChecker): Prom
     throw new Error('No repositories configured. Either provide static repositories or enable dynamic repository fetching.');
 }
 
-// Helper to check if a required check failed for a specific repository
-function getFailedRequires(failure: CheckResult, allResults: CheckResult[]): { check: string; reason?: string }[] {
+// ============================================================================
+// Result Processing Helpers
+// ============================================================================
+
+interface ProcessedFailure {
+    failure: CheckResult;
+    repo: string;
+    status: { emoji: string; message: string };
+    failedRequires: RequiresEntry[];
+}
+
+interface GroupedResults {
+    failedCount: number;
+    passedCount: number;
+    byCheck: Map<string, Map<string, ProcessedFailure[]>>; // checkName -> repo -> failures
+}
+
+function getFailureStatus(failure: CheckResult): { emoji: string; message: string } {
+    if (failure.error) {
+        if (failure.error.includes('File not found')) {
+            return { emoji: '🤷‍♂️', message: 'File not found' };
+        }
+        return { emoji: '❌', message: failure.error };
+    }
+    return { emoji: '🔍', message: 'Pattern not found' };
+}
+
+function getFailedRequires(failure: CheckResult, allResults: CheckResult[]): RequiresEntry[] {
     if (!failure.requires || failure.requires.length === 0) {
         return [];
     }
 
     return failure.requires.filter(req => {
-        // Check if the required check also failed for this repository
         const requiredCheckResult = allResults.find(
             r => r.check === req.check && r.repository === failure.repository
         );
@@ -43,90 +70,83 @@ function getFailedRequires(failure: CheckResult, allResults: CheckResult[]): { c
     });
 }
 
+function processResults(results: CheckResult[]): GroupedResults {
+    const failedResults = results.filter(r => !r.passed);
+    const passedCount = results.filter(r => r.passed).length;
+
+    const byCheck = new Map<string, Map<string, ProcessedFailure[]>>();
+
+    for (const failure of failedResults) {
+        if (!byCheck.has(failure.check)) {
+            byCheck.set(failure.check, new Map());
+        }
+        const repoMap = byCheck.get(failure.check)!;
+
+        if (!repoMap.has(failure.repository)) {
+            repoMap.set(failure.repository, []);
+        }
+
+        repoMap.get(failure.repository)!.push({
+            failure,
+            repo: failure.repository,
+            status: getFailureStatus(failure),
+            failedRequires: getFailedRequires(failure, results),
+        });
+    }
+
+    return { failedCount: failedResults.length, passedCount, byCheck };
+}
+
+// ============================================================================
+// Report Generation
+// ============================================================================
+
 function generateMarkdownReport(results: CheckResult[]): string {
+    const processed = processResults(results);
     const lines: string[] = [];
-    const failedResults = results.filter(result => !result.passed);
-    const passedResults = results.filter(result => result.passed);
 
     lines.push('# Rules Doctor Report');
     lines.push('');
     lines.push(`Generated: ${new Date().toISOString()}`);
     lines.push('');
 
-    if (failedResults.length === 0) {
+    if (processed.failedCount === 0) {
         lines.push('## ✅ All checks passed!');
         return lines.join('\n');
     }
 
     lines.push('## Summary');
     lines.push('');
-    lines.push(`- ❌ **Failed checks:** ${failedResults.length}`);
-    lines.push(`- ✅ **Passed checks:** ${passedResults.length}`);
+    lines.push(`- ❌ **Failed checks:** ${processed.failedCount}`);
+    lines.push(`- ✅ **Passed checks:** ${processed.passedCount}`);
     lines.push('');
     lines.push('## Failed Checks');
     lines.push('');
 
-    // Group by check name
-    const groupedByCheck = failedResults.reduce((acc, result) => {
-        if (!acc[result.check]) {
-            acc[result.check] = [];
-        }
-        acc[result.check].push(result);
-        return acc;
-    }, {} as Record<string, CheckResult[]>);
+    const sortedChecks = [...processed.byCheck.keys()].sort();
 
-    // Sort checks alphabetically
-    const sortedCheckNames = Object.keys(groupedByCheck).sort();
-
-    for (const checkName of sortedCheckNames) {
-        const failures = groupedByCheck[checkName];
+    for (const checkName of sortedChecks) {
+        const repoMap = processed.byCheck.get(checkName)!;
         lines.push(`### 🔍 ${checkName}`);
         lines.push('');
-
-        // Group by repository for this check
-        const byRepo = failures.reduce((acc, result) => {
-            if (!acc[result.repository]) {
-                acc[result.repository] = [];
-            }
-            acc[result.repository].push(result);
-            return acc;
-        }, {} as Record<string, CheckResult[]>);
-
-        // Sort repositories alphabetically
-        const sortedRepos = Object.keys(byRepo).sort();
-
         lines.push('| Repository | File | Status |');
         lines.push('|------------|------|--------|');
 
+        const sortedRepos = [...repoMap.keys()].sort();
         for (const repo of sortedRepos) {
-            const repoFailures = byRepo[repo];
-
-            for (const failure of repoFailures) {
+            for (const { failure, status, failedRequires } of repoMap.get(repo)!) {
                 const repoLink = `[${repo}](https://github.com/${repo})`;
                 const fileLink = `[${failure.filePath}](https://github.com/${repo}/blob/main/${failure.filePath})`;
-                let status: string;
 
-                if (failure.error) {
-                    if (failure.error.includes('File not found')) {
-                        status = '🤷‍♂️ File not found';
-                    } else {
-                        status = `❌ ${failure.error}`;
-                    }
-                } else {
-                    status = '🔍 Pattern not found';
-                }
-
-                // Check if required checks failed for this repo
-                const failedRequires = getFailedRequires(failure, results);
+                let statusText = `${status.emoji} ${status.message}`;
                 if (failedRequires.length > 0) {
-                    const reqLinks = failedRequires.map(req => {
-                        const anchor = `-${req.check}`;
-                        return `[\`${req.check}\`](#${anchor})`;
-                    }).join(', ');
-                    status += ` ⚠️ Fix first: ${reqLinks}`;
+                    const reqLinks = failedRequires
+                        .map(req => `[\`${req.check}\`](#-${req.check})`)
+                        .join(', ');
+                    statusText += ` ⚠️ Fix first: ${reqLinks}`;
                 }
 
-                lines.push(`| ${repoLink} | ${fileLink} | ${status} |`);
+                lines.push(`| ${repoLink} | ${fileLink} | ${statusText} |`);
             }
         }
         lines.push('');
@@ -136,66 +156,32 @@ function generateMarkdownReport(results: CheckResult[]): string {
 }
 
 function reportResults(results: CheckResult[]): void {
-    const failedResults = results.filter(result => !result.passed);
+    const processed = processResults(results);
 
-    if (failedResults.length === 0) {
+    if (processed.failedCount === 0) {
         console.log('✅ All checks passed!');
         return;
     }
 
-    console.log(`\n❌ Found ${failedResults.length} failed check(s):\n`);
+    console.log(`\n❌ Found ${processed.failedCount} failed check(s):\n`);
 
-    // Group by check name instead of repository
-    const groupedByCheck = failedResults.reduce((acc, result) => {
-        if (!acc[result.check]) {
-            acc[result.check] = [];
-        }
-        acc[result.check].push(result);
-        return acc;
-    }, {} as Record<string, CheckResult[]>);
+    const sortedChecks = [...processed.byCheck.keys()].sort();
 
-    // Sort checks alphabetically
-    const sortedCheckNames = Object.keys(groupedByCheck).sort();
-
-    for (const checkName of sortedCheckNames) {
-        const failures = groupedByCheck[checkName];
+    for (const checkName of sortedChecks) {
+        const repoMap = processed.byCheck.get(checkName)!;
         console.log(`🔍 Check: ${checkName}`);
 
-        // Group by repository for this check
-        const byRepo = failures.reduce((acc, result) => {
-            if (!acc[result.repository]) {
-                acc[result.repository] = [];
-            }
-            acc[result.repository].push(result);
-            return acc;
-        }, {} as Record<string, CheckResult[]>);
-
-        // Sort repositories alphabetically
-        const sortedRepos = Object.keys(byRepo).sort();
-
+        const sortedRepos = [...repoMap.keys()].sort();
         for (const repo of sortedRepos) {
-            const repoFailures = byRepo[repo];
             console.log(`  📦 Repository: https://github.com/${repo}`);
 
-            for (const failure of repoFailures) {
-                if (failure.error) {
-                    if (failure.error.includes('File not found')) {
-                        console.log(`     🤷‍♂️ ${failure.filePath} - File not found`);
-                    } else {
-                        console.log(`     ❌ ${failure.filePath} - ${failure.error}`);
-                    }
-                } else {
-                    console.log(`     🔍 ${failure.filePath} - Pattern not found`);
-                }
+            for (const { failure, status, failedRequires } of repoMap.get(repo)!) {
+                console.log(`     ${status.emoji} ${failure.filePath} - ${status.message}`);
                 console.log(`        View: https://github.com/${repo}/blob/main/${failure.filePath}`);
 
-                // Check if required checks failed for this repo
-                const failedRequires = getFailedRequires(failure, results);
-                if (failedRequires.length > 0) {
-                    for (const req of failedRequires) {
-                        const reason = req.reason ? ` (${req.reason})` : '';
-                        console.log(`        ⚠️  Fix first: ${req.check}${reason}`);
-                    }
+                for (const req of failedRequires) {
+                    const reason = req.reason ? ` (${req.reason})` : '';
+                    console.log(`        ⚠️  Fix first: ${req.check}${reason}`);
                 }
             }
         }

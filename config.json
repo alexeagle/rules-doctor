@@ -37,6 +37,12 @@
                     "repository": "bazel-contrib/publish-to-bcr",
                     "reason": "Is not a ruleset"
                 }
+            ],
+            "requires": [
+                {
+                    "check": "uses-bazelrc-preset",
+                    "reason": "config=ruleset is defined in the bazelrc presets and should be fixed first"
+                }
             ]
         },
         {

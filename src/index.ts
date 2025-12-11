@@ -68,6 +68,18 @@ function generateMarkdownReport(results: CheckResult[]): string {
         lines.push(`### 🔍 ${checkName}`);
         lines.push('');
 
+        // Show requires info if present (take from first failure since it's the same for all)
+        const requires = failures[0]?.requires;
+        if (requires && requires.length > 0) {
+            lines.push('> **⚠️ Fix these checks first:**');
+            for (const req of requires) {
+                const reason = req.reason ? ` - ${req.reason}` : '';
+                const anchor = `-${req.check}`;
+                lines.push(`> - [\`${req.check}\`](#${anchor})${reason}`);
+            }
+            lines.push('');
+        }
+
         // Group by repository for this check
         const byRepo = failures.reduce((acc, result) => {
             if (!acc[result.repository]) {
@@ -135,6 +147,16 @@ function reportResults(results: CheckResult[]): void {
     for (const checkName of sortedCheckNames) {
         const failures = groupedByCheck[checkName];
         console.log(`🔍 Check: ${checkName}`);
+
+        // Show requires info if present (take from first failure since it's the same for all)
+        const requires = failures[0]?.requires;
+        if (requires && requires.length > 0) {
+            console.log('   ⚠️  Fix these checks first:');
+            for (const req of requires) {
+                const reason = req.reason ? ` - ${req.reason}` : '';
+                console.log(`      → ${req.check}${reason}`);
+            }
+        }
 
         // Group by repository for this check
         const byRepo = failures.reduce((acc, result) => {

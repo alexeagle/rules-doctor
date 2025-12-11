@@ -72,7 +72,7 @@
         },
         {
             "name": "tag-propagate-workflow",
-            "file": ".github/workflows/release.yml",
+            "file": ".github/workflows/release.yaml",
             "pattern": "inputs.tag_name || github.ref_name",
             "description": "Doesn't have the dumb bug",
             "exclude": [

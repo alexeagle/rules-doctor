@@ -1,2 +1,5 @@
 dist/
 node_modules/
+
+# Generated reports
+report.md

@@ -24,6 +24,5 @@ jobs:
         run: npm run build
       - name: Run
         run: |
-          echo '## Rules Doctor Report' >> $GITHUB_STEP_SUMMARY
-          (npm start 2>&1 || true) | tee output.txt
-          cat output.txt >> $GITHUB_STEP_SUMMARY
+          npm start || true
+          cat report.md >> $GITHUB_STEP_SUMMARY

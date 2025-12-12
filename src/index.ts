@@ -18,16 +18,24 @@ async function loadConfig(configPath: string): Promise<Config> {
 }
 
 async function getRepositories(config: Config, checker: RepositoryChecker): Promise<string[]> {
+    const repositories: string[] = [];
+
     if (config.dynamicRepositories?.enabled) {
         console.log(`Fetching repositories from ${config.dynamicRepositories.source} for org: ${config.dynamicRepositories.organization} with topic: ${config.dynamicRepositories.topic}`);
-        return await checker.fetchBazelContribRepositories();
+        const dynamicRepos = await checker.fetchBazelContribRepositories();
+        repositories.push(...dynamicRepos);
     }
 
-    if (config.repositories) {
-        return config.repositories;
+    if (config.repositories?.enabled) {
+        repositories.push(...config.repositories.list);
     }
 
-    throw new Error('No repositories configured. Either provide static repositories or enable dynamic repository fetching.');
+    if (repositories.length === 0) {
+        throw new Error('No repositories configured. Either provide static repositories or enable dynamic repository fetching.');
+    }
+
+    // Remove duplicates
+    return [...new Set(repositories)];
 }
 
 // ============================================================================
